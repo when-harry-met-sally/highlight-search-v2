@@ -2,41 +2,49 @@ import React from "react";
 import * as _ from "lodash";
 
 export const elastic = (
-  filter: string,
+  filterString: string,
   list: any[],
-  searchCriteria: string[][],
+  fieldPaths: string[][]
 ) => {
-  let rebuilt: any = [];
-  const getDeepField: any = (father: any, object: any, fields: string[]) => {
-    if (!object) {
-      object = father;
+  let filteredList: object[] = [];
+  const getDeepField: any = (
+    originalObject: object,
+    nestedObject: any,
+    fields: string[],
+    match: boolean
+  ) => {
+    if (!nestedObject) {
+      nestedObject = originalObject;
     }
     fields = _.cloneDeep(fields);
     if (fields.length > 1) {
       const field: any = fields.shift();
-      const deeper: any = getDeepField(father, object[field], fields);
+      const deeper: any = getDeepField(originalObject, nestedObject[field], fields, match);
       if (deeper) {
         return deeper;
       }
     }
-    const test = scanDeepField(object[fields[0]]);
+    const test = scanDeepField(nestedObject[fields[0]]);
     if (test) {
-      object[fields[0]] = test;
-      rebuilt.push(father);
+      nestedObject[fields[0]] = test;
+      if (!match) {
+        filteredList.push(originalObject);
+      }
+      return nestedObject[fields[0]];
     }
-    return object[fields[0]];
+    return null;
   };
   const scanDeepField: any = (object: any) => {
     let searchMatch = false;
     let searchString = object;
     if (!searchString) {
-      return;
+      return null;
     }
-    const filterLength = filter.length;
+    const filterLength = filterString.length;
     let newField = [];
     for (let c = 0; c < searchString.length; c++) {
       const comparison = searchString.slice(c, c + filterLength);
-      if (comparison.toLowerCase() === filter.toLowerCase()) {
+      if (comparison.toLowerCase() === filterString.toLowerCase()) {
         searchMatch = true;
         newField.push(
           <span key={c} className="hl">
@@ -54,15 +62,23 @@ export const elastic = (
     }
     return null;
   };
-  list = _.cloneDeep(list);
-  filter.trim();
-  if (!filter || filter === "") {
+
+  if (!filterString) {
     return list;
   }
-  list.forEach(item => {
-    searchCriteria.forEach(criteria => {
-      getDeepField(item, null, criteria);
+  filterString = filterString.trim();
+  if (!filterString) {
+    return list;
+  }
+
+  list = _.cloneDeep(list);
+  list.forEach(object => {
+    let filterMatch = false;
+    fieldPaths.forEach(criteria => {
+      if (getDeepField(object, null, criteria, filterMatch)) {
+        filterMatch = true;
+      }
     });
   });
-  return rebuilt;
+  return filteredList;
 };
