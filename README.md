@@ -15,5 +15,7 @@ This function can now search nested objects like these. If we wanted to search t
 
 The string[][] serves as directions to navigate to the desired string field.
 
-Upcoming change:
+Upcoming changes:
 Searches can handle string fields now, but will be able to handle a list of strings.
+
+When another list of uniform objects is found, the function calls itself.
